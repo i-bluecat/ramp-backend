@@ -1,6 +1,3 @@
-// Base URL del backend
-const API_URL = "https://ramp-backend-lzl8.onrender.com";
-
 // Elementos del DOM
 const cryptoList = document.getElementById("crypto-list");
 const fiatList = document.getElementById("fiat-list");
@@ -15,13 +12,22 @@ let total = 0;
 // Función para cargar precios desde el backend
 async function loadPrices() {
   try {
-      const response = await fetch(`${API_URL}/api/prices`);
-      const prices = await response.json();
-      // Procesar datos
+    const response = await fetch("http://localhost:5000/api/prices"); // Cambia la URL si es necesario.
+    if (!response.ok) throw new Error("Error fetching prices");
+
+    const prices = await response.json();
+
+    // Separar precios en cryptos y fiat
+    const cryptoPrices = prices.filter((p) => p.symbol.endsWith("USDT"));
+    const fiatPrices = prices.filter((p) => !p.symbol.endsWith("USDT"));
+
+    // Mostrar precios en la página
+    displayAssets(cryptoPrices, cryptoList);
+    displayAssets(fiatPrices, fiatList);
   } catch (error) {
-      console.error("Error cargando precios:", error);
-      cryptoList.innerHTML = "Error loading cryptos.";
-      fiatList.innerHTML = "Error loading fiat.";
+    console.error("Error cargando precios:", error);
+    cryptoList.innerHTML = "Error loading cryptos.";
+    fiatList.innerHTML = "Error loading fiat.";
   }
 }
 
@@ -34,7 +40,7 @@ function displayAssets(prices, container) {
     assetElement.innerHTML = `
       <h3>${asset.symbol}</h3>
       <p>Price: $${parseFloat(asset.price).toFixed(2)}</p>
-      <input type="number" placeholder="Amount in units" min="0.01" step="0.01" />
+      <input type="number" placeholder="Amount in USD" min="1" />
       <button onclick="addToCart('${asset.symbol}', ${asset.price}, this)">Add</button>
     `;
     container.appendChild(assetElement);
@@ -44,26 +50,18 @@ function displayAssets(prices, container) {
 // Función para añadir al carrito
 function addToCart(symbol, price, button) {
   const input = button.previousElementSibling;
-  const units = parseFloat(input.value); // Lo que ingresa el usuario como cantidad de unidades
+  const usdAmount = parseFloat(input.value);
 
-  if (!units || units <= 0) {
+  if (!usdAmount || usdAmount <= 0) {
     alert("Please enter a valid amount.");
     return;
   }
 
-  const usdAmount = units * price; // Multiplicar por el precio para obtener el total en USD
-
   const existing = cart.find((item) => item.symbol === symbol);
   if (existing) {
-    existing.units += units; // Incrementar unidades
-    existing.amount += usdAmount; // Incrementar el total en USD
+    existing.amount += usdAmount;
   } else {
-    cart.push({
-      symbol,
-      price,
-      units, // Cantidad de unidades
-      amount: usdAmount, // Total en USD calculado
-    });
+    cart.push({ symbol, price, amount: usdAmount });
   }
 
   updateCart();
@@ -79,8 +77,8 @@ function updateCart() {
 
     const li = document.createElement("li");
     li.innerHTML = `
-      ${item.symbol}: ${item.units.toFixed(4)} units ($${item.amount.toFixed(2)})
-      <button class="remove-button" onclick="removeFromCart('${item.symbol}')">Remove</button>
+      ${item.symbol}: $${item.amount.toFixed(2)}
+      <button onclick="removeFromCart('${item.symbol}')">Remove</button>
     `;
     cartItems.appendChild(li);
   });
@@ -101,31 +99,7 @@ checkoutButton.addEventListener("click", async () => {
     return;
   }
 
-  const totalAmount = Math.round(total * 100); // Convertir a centavos
-
-  try {
-    // Crear PDF en el backend
-    const response = await fetch(`${baseURL}/api/pdf`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cart, total }),
-    });
-
-    const result = await response.json();
-
-    if (result.path) {
-      // Descargar el PDF
-      const link = document.createElement("a");
-      link.href = `${baseURL}/${result.path}`;
-      link.download = "receipt.pdf";
-      link.click();
-    } else {
-      throw new Error("PDF generation failed.");
-    }
-  } catch (err) {
-    console.error("Error en el checkout:", err.message);
-    alert("Something went wrong while generating the PDF.");
-  }
+  alert("Checkout is disabled for now.");
 });
 
 // Llama a loadPrices al iniciar

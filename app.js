@@ -1,26 +1,17 @@
-{
-    "name": "server",
-    "version": "1.0.0",
-    "main": "server/app.js",
-    "scripts": {
-        "start": "node server/app.js"
-    },
-    "dependencies": {
-        "axios": "^1.7.9",
-        "cors": "^2.8.5",
-        "dotenv": "^16.4.7",
-        "express": "^4.21.2",
-        "helmet": "^8.0.0",
-        "pdfkit": "^0.16.0",
-        "stripe": "^17.5.0"
-    },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
-    "type": "commonjs",
-    "description": ""
-}
+const express = require("express");
+const cors = require("cors"); // Importar CORS
+const app = express();
 
+app.use(cors()); // Habilitar CORS
+app.use(express.json()); // Para manejar JSON
+
+// Registrar rutas
+app.use("/api/pdf", pdfRoutes);
+
+// Endpoint de prueba para verificar si el servidor funciona
+app.get("/", (req, res) => {
+  res.send("Servidor funcionando correctamente.");
+});
 
 // Endpoint para obtener precios
 app.get("/api/prices", (req, res) => {
@@ -37,21 +28,6 @@ app.get("/api/prices", (req, res) => {
     { symbol: "AVAXUSDT", price: 37.33 },
   ];
   res.json(prices);
-});
-
-// Endpoint para generar PDF
-app.post("/api/pdf", async (req, res) => {
-  const { cart, total } = req.body;
-
-  try {
-    const pdfPath = path.join(__dirname, "receipt.pdf");
-    await generatePDF(cart, total, pdfPath);
-
-    res.status(200).sendFile(pdfPath);
-  } catch (error) {
-    console.error("Error generando el PDF:", error.message);
-    res.status(500).json({ error: "Failed to generate PDF" });
-  }
 });
 
 // Iniciar servidor
